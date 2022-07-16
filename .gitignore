@@ -2,6 +2,7 @@
 *.o
 tags
 *.swp
+.cache
 
 # We recommend building in a subdirectory called build.
 # If you chose a different directory name,

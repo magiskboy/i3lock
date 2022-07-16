@@ -16,6 +16,7 @@
 #include <ev.h>
 #include <cairo.h>
 #include <cairo/cairo-xcb.h>
+#include <time.h>
 
 #include "i3lock.h"
 #include "xcb.h"
@@ -23,10 +24,12 @@
 #include "randr.h"
 #include "dpi.h"
 
-#define BUTTON_RADIUS 90
+#define BUTTON_RADIUS 60
 #define BUTTON_SPACE (BUTTON_RADIUS + 5)
 #define BUTTON_CENTER (BUTTON_RADIUS + 5)
 #define BUTTON_DIAMETER (2 * BUTTON_SPACE)
+#define LINE_WIDTH 2
+#define FONT_SIZE 20
 
 /*******************************************************************************
  * Variables defined in i3lock.c.
@@ -179,7 +182,7 @@ void draw_image(xcb_pixmap_t bg_pixmap, uint32_t *resolution) {
         (unlock_state >= STATE_KEY_PRESSED || auth_state > STATE_AUTH_IDLE)) {
         cairo_scale(ctx, scaling_factor, scaling_factor);
         /* Draw a (centered) circle with transparent background. */
-        cairo_set_line_width(ctx, 10.0);
+        cairo_set_line_width(ctx, LINE_WIDTH);
         cairo_arc(ctx,
                   BUTTON_CENTER /* x */,
                   BUTTON_CENTER /* y */,
@@ -192,18 +195,18 @@ void draw_image(xcb_pixmap_t bg_pixmap, uint32_t *resolution) {
         switch (auth_state) {
             case STATE_AUTH_VERIFY:
             case STATE_AUTH_LOCK:
-                cairo_set_source_rgba(ctx, 0, 114.0 / 255, 255.0 / 255, 0.75);
+                cairo_set_source_rgba(ctx, 1, 1, 1, 0.1);
                 break;
             case STATE_AUTH_WRONG:
             case STATE_I3LOCK_LOCK_FAILED:
-                cairo_set_source_rgba(ctx, 250.0 / 255, 0, 0, 0.75);
+                cairo_set_source_rgba(ctx, 1, 1, 1, 0.1);
                 break;
             default:
                 if (unlock_state == STATE_NOTHING_TO_DELETE) {
-                    cairo_set_source_rgba(ctx, 250.0 / 255, 0, 0, 0.75);
+                    cairo_set_source_rgba(ctx, 1, 1, 1, 0.1);
                     break;
                 }
-                cairo_set_source_rgba(ctx, 0, 0, 0, 0.75);
+                cairo_set_source_rgba(ctx, 1, 1, 1, 0.1);
                 break;
         }
         cairo_fill_preserve(ctx);
@@ -227,28 +230,19 @@ void draw_image(xcb_pixmap_t bg_pixmap, uint32_t *resolution) {
                 break;
         }
         cairo_stroke(ctx);
-
-        /* Draw an inner seperator line. */
-        cairo_set_source_rgb(ctx, 0, 0, 0);
-        cairo_set_line_width(ctx, 2.0);
-        cairo_arc(ctx,
-                  BUTTON_CENTER /* x */,
-                  BUTTON_CENTER /* y */,
-                  BUTTON_RADIUS - 5 /* radius */,
-                  0,
-                  2 * M_PI);
-        cairo_stroke(ctx);
-
-        cairo_set_line_width(ctx, 10.0);
+        cairo_set_line_width(ctx, LINE_WIDTH);
 
         /* Display a (centered) text of the current PAM state. */
-        char *text = NULL;
+        char *text = malloc(100 * sizeof(char));
+        time_t now = time(NULL);
+        struct tm *t = localtime(&now);
+        strftime(text, 100, "%k:%M", t);
         /* We don't want to show more than a 3-digit number. */
         char buf[4];
 
-        cairo_set_source_rgb(ctx, 0, 0, 0);
+        cairo_set_source_rgb(ctx, 1, 1, 1);
         cairo_select_font_face(ctx, "sans-serif", CAIRO_FONT_SLANT_NORMAL, CAIRO_FONT_WEIGHT_NORMAL);
-        cairo_set_font_size(ctx, 28.0);
+        cairo_set_font_size(ctx, FONT_SIZE);
         switch (auth_state) {
             case STATE_AUTH_VERIFY:
                 text = "Verifying…";
@@ -274,7 +268,7 @@ void draw_image(xcb_pixmap_t bg_pixmap, uint32_t *resolution) {
                         text = buf;
                     }
                     cairo_set_source_rgb(ctx, 1, 0, 0);
-                    cairo_set_font_size(ctx, 32.0);
+                    cairo_set_font_size(ctx, FONT_SIZE);
                 }
                 break;
         }
@@ -296,7 +290,7 @@ void draw_image(xcb_pixmap_t bg_pixmap, uint32_t *resolution) {
             cairo_text_extents_t extents;
             double x, y;
 
-            cairo_set_font_size(ctx, 14.0);
+            cairo_set_font_size(ctx, FONT_SIZE);
 
             cairo_text_extents(ctx, modifier_string, &extents);
             x = BUTTON_CENTER - ((extents.width / 2) + extents.x_bearing);
